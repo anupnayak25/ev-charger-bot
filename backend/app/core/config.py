@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field("gpt-4o-mini", alias="OPENAI_MODEL")
+    openai_temperature: float = Field(0.2, alias="OPENAI_TEMPERATURE")
 
     # Assistant behavior (persona)
     assistant_system_prompt: str = Field(

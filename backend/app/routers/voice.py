@@ -1,49 +1,75 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+import os
+
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.config import get_settings
 from app.core.openai_client import get_openai_client
-from app.schemas import SpeakRequest
+from app.schemas import ChatResponse
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
-@router.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
+@router.post("/ask", response_model=ChatResponse)
+def ask(
+    audio: UploadFile = File(...),
+    summary: str | None = Form(default=None),
+    system_prompt: str | None = Form(default=None),
+) -> ChatResponse:
+    """Speech-to-answer: transcribe audio and return the assistant's text reply."""
+
     settings = get_settings()
     client = get_openai_client()
+
+    filename = audio.filename or "audio"
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower().lstrip(".")
+    supported_exts = {"mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"}
+    if ext and ext not in supported_exts:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported audio file type '.{ext}'. "
+                f"Supported: {', '.join(sorted(supported_exts))}."
+            ),
+        )
 
     try:
-        result = client.audio.transcriptions.create(
-            model=settings.openai_stt_model,
-            file=audio.file,
-        )
-        return {"text": result.text}
-    except Exception as exc:  # pragma: no cover
-        raise HTTPException(status_code=500, detail=f"OpenAI STT failed: {exc}")
-
-
-@router.post("/speak")
-def speak(req: SpeakRequest):
-    settings = get_settings()
-    client = get_openai_client()
-
-    media_type = "audio/mpeg" if req.format == "mp3" else "audio/wav"
-
-    def generate():
         try:
-            with client.audio.speech.with_streaming_response.create(
-                model=settings.openai_tts_model,
-                voice=req.voice,
-                input=req.text,
-                format=req.format,
-            ) as response:
-                for chunk in response.iter_bytes():
-                    yield chunk
-        except Exception as exc:  # pragma: no cover
-            # StreamingResponse can't easily raise HTTPException mid-stream.
-            raise RuntimeError(f"OpenAI TTS failed: {exc}")
+            audio.file.seek(0)
+        except Exception:
+            pass
 
-    return StreamingResponse(generate(), media_type=media_type)
+        stt = client.audio.transcriptions.create(
+            model=settings.openai_stt_model,
+            file=(filename, audio.file, audio.content_type or "application/octet-stream"),
+        )
+        transcript = (stt.text or "").strip()
+        if not transcript:
+            raise HTTPException(status_code=400, detail="Could not transcribe audio (empty transcript).")
+
+        system_content = system_prompt or settings.assistant_system_prompt
+        if summary and summary.strip():
+            system_content = (
+                system_content
+                + "\n\nConversation summary (client-maintained). Treat as context and constraints:\n"
+                + summary.strip()
+            )
+
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": transcript},
+        ]
+
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            temperature=settings.openai_temperature,
+            messages=messages,
+        )
+        reply = response.choices[0].message.content or ""
+        return ChatResponse(reply=reply)
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=500, detail=f"Voice ask failed: {exc}")

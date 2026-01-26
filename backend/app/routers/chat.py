@@ -14,20 +14,28 @@ def chat(req: ChatRequest) -> ChatResponse:
     settings = get_settings()
     client = get_openai_client()
 
-    input_messages = [m.model_dump() for m in req.messages]
-    has_instruction = any(m["role"] in {"system", "developer"} for m in input_messages)
-    if not has_instruction:
-        input_messages = [
-            {"role": "system", "content": (req.system_prompt or settings.assistant_system_prompt)},
-            *input_messages,
-        ]
+    system_content = req.system_prompt or settings.assistant_system_prompt
+    if req.summary and req.summary.strip():
+        system_content = (
+            system_content
+            + "\n\nConversation summary (client-maintained). Treat as context and constraints:\n"
+            + req.summary.strip()
+        )
+
+    messages: list[dict[str, str]] = [{"role": "system", "content": system_content}]
+
+    for turn in req.turns:
+        messages.append({"role": "user", "content": turn.user})
+        if turn.assistant:
+            messages.append({"role": "assistant", "content": turn.assistant})
 
     try:
-        response = client.responses.create(
-            model=req.model or settings.openai_model,
-            input=input_messages,
-            temperature=req.temperature,
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            temperature=settings.openai_temperature,
+            messages=messages,
         )
-        return ChatResponse(reply=response.output_text)
+        reply = response.choices[0].message.content or ""
+        return ChatResponse(reply=reply)
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"OpenAI request failed: {exc}")
