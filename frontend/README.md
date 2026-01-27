@@ -1,16 +1,46 @@
-# ev_charger_bot
+# EV Charger Bot (Flutter Frontend)
 
-A new Flutter project.
+Flutter UI for the EV Charger Bot.
 
-## Getting Started
+- Text chat (`/api/chat`)
+- Voice recording + upload (`/api/voice/ask`)
 
-This project is a starting point for a Flutter application.
+Backend lives in [../backend](../backend).
 
-A few resources to get you started if this is your first Flutter project:
+## Prerequisites
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Flutter (stable)
+- Android Studio / SDK (or your preferred target platform toolchain)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Install dependencies
+
+```powershell
+cd frontend
+flutter pub get
+```
+
+## Configure backend URL
+
+The app reads the backend base URL from `--dart-define=BACKEND_URL=...`. If not provided, it falls back to the default
+in `lib/main.dart`.
+
+Common values:
+
+- Android emulator: `http://10.0.2.2:8000`
+- iOS simulator: `http://127.0.0.1:8000`
+- Real device: `http://<your-computer-lan-ip>:8000`
+
+Example (Android emulator):
+
+```powershell
+cd frontend
+flutter run --dart-define=BACKEND_URL=http://10.0.2.2:8000
+```
+
+## Run
+
+```powershell
+cd frontend
+flutter run
+```
+
