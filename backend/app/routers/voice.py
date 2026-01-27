@@ -6,17 +6,17 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.config import get_settings
 from app.core.openai_client import get_openai_client
-from app.schemas import ChatResponse
+from app.schemas import VoiceResponse
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
-@router.post("/ask", response_model=ChatResponse)
+@router.post("/ask", response_model=VoiceResponse)
 def ask(
     audio: UploadFile = File(...),
     summary: str | None = Form(default=None),
     system_prompt: str | None = Form(default=None),
-) -> ChatResponse:
+) -> VoiceResponse:
     """Speech-to-answer: transcribe audio and return the assistant's text reply."""
 
     settings = get_settings()
@@ -68,7 +68,7 @@ def ask(
             messages=messages,
         )
         reply = response.choices[0].message.content or ""
-        return ChatResponse(reply=reply)
+        return VoiceResponse(transcript=transcript, reply=reply)
     except HTTPException:
         raise
     except Exception as exc:  # pragma: no cover

@@ -21,3 +21,8 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class VoiceResponse(BaseModel):
+    transcript: str
+    reply: str
