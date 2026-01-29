@@ -4,7 +4,6 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.config import get_settings
 from app.core.openai_client import get_openai_client
-from app.core.topic_guard import is_ev_charging_related, refusal_message
 from app.schemas import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -14,12 +13,6 @@ router = APIRouter(prefix="/api", tags=["chat"])
 def chat(req: ChatRequest) -> ChatResponse:
     settings = get_settings()
     client = get_openai_client()
-
-    # Enforce scope: only EV charging questions.
-    if req.turns:
-        last_user = (req.turns[-1].user or "").strip()
-        if last_user and not is_ev_charging_related(last_user):
-            return ChatResponse(reply=refusal_message())
 
     system_content = req.system_prompt or settings.assistant_system_prompt
     if req.summary and req.summary.strip():
