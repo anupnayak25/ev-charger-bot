@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.config import get_settings
 from app.core.openai_client import get_openai_client
+from app.core.topic_guard import is_ev_charging_related, refusal_message
 from app.schemas import VoiceResponse
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
@@ -48,6 +49,10 @@ def ask(
         transcript = (stt.text or "").strip()
         if not transcript:
             raise HTTPException(status_code=400, detail="Could not transcribe audio (empty transcript).")
+
+        # Enforce scope: only EV charging questions.
+        if not is_ev_charging_related(transcript):
+            return VoiceResponse(transcript=transcript, reply=refusal_message())
 
         system_content = system_prompt or settings.assistant_system_prompt
         if summary and summary.strip():
