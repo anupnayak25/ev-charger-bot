@@ -24,6 +24,22 @@ cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## Tests
+
+Install dev dependencies:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m pip install -r requirements-dev.txt
+```
+
+Run tests:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m pytest
+```
+
 ## Endpoints
 
 - `GET /`(health check)
