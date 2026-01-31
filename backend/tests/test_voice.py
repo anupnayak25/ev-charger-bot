@@ -50,7 +50,7 @@ def test_voice_rejects_unsupported_extension(client):
     assert "unsupported" in res.json()["detail"].lower()
 
 
-def test_voice_offtopic_still_calls_chat_completion(client, monkeypatch, dummy_audio_bytes: bytes):
+def test_voice_offtopic_still_calls_chat_completion_and_sends_scope_prompt(client, monkeypatch, dummy_audio_bytes: bytes):
     from app.core import openai_client
     from tests.conftest import FakeOpenAI
 
@@ -76,6 +76,11 @@ def test_voice_offtopic_still_calls_chat_completion(client, monkeypatch, dummy_a
     assert res.json()["reply"] == "(refusal handled by system prompt)"
     assert stt_spy.get("called") is True
     assert chat_spy.get("called") is True
+
+    msgs = chat_spy["kwargs"]["messages"]
+    assert msgs[0]["role"] == "system"
+    system_text = (msgs[0]["content"] or "").lower()
+    assert "ev charging support" in system_text
 
 
 @pytest.mark.parametrize(

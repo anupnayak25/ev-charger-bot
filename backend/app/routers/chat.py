@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.core.config import get_settings
-from app.core.openai_client import get_openai_client
+from app.core import openai_client
 from app.schemas import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api", tags=["chat"])
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
     settings = get_settings()
-    client = get_openai_client()
+    client = openai_client.get_openai_client()
 
     system_content = req.system_prompt or settings.assistant_system_prompt
     if req.summary and req.summary.strip():

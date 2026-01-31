@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.config import get_settings
-from app.core.openai_client import get_openai_client
+from app.core import openai_client
 from app.schemas import VoiceResponse
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
@@ -20,7 +20,7 @@ def ask(
     """Speech-to-answer: transcribe audio and return the assistant's text reply."""
 
     settings = get_settings()
-    client = get_openai_client()
+    client = openai_client.get_openai_client()
 
     filename = audio.filename or "audio"
     _, ext = os.path.splitext(filename)

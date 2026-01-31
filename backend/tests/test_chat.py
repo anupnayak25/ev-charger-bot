@@ -40,7 +40,7 @@ def test_chat_happy_path_calls_openai_and_returns_reply(client, monkeypatch):
     assert msgs[0]["role"] == "system"
 
 
-def test_chat_offtopic_still_calls_openai(client, monkeypatch):
+def test_chat_offtopic_still_calls_openai_and_sends_scope_prompt(client, monkeypatch):
     from app.core import openai_client
     from tests.conftest import FakeOpenAI
 
@@ -61,8 +61,13 @@ def test_chat_offtopic_still_calls_openai(client, monkeypatch):
 
     res = client.post("/api/chat", json=payload)
     assert res.status_code == 200
-    assert res.json()["reply"] == "(refusal handled by system prompt)"
     assert spy.get("called") is True
+
+    msgs = spy["kwargs"]["messages"]
+    assert msgs[0]["role"] == "system"
+    system_text = (msgs[0]["content"] or "").lower()
+    assert "ev charging support" in system_text
+    assert "only refuse" in system_text
 
 
 @pytest.mark.parametrize(
@@ -73,7 +78,7 @@ def test_chat_offtopic_still_calls_openai(client, monkeypatch):
         "Charging session fails after RFID tap.",
     ],
 )
-def test_chat_topic_guard_allows_ev_charging_topics(client, monkeypatch, user: str):
+def test_chat_allows_in_scope_ev_charging_topics(client, monkeypatch, user: str):
     from app.core import openai_client
     from tests.conftest import FakeOpenAI
 
