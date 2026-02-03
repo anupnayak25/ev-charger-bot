@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -9,6 +10,8 @@ from app.core import openai_client
 from app.schemas import VoiceResponse
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/ask", response_model=VoiceResponse)
@@ -71,5 +74,9 @@ def ask(
         return VoiceResponse(transcript=transcript, reply=reply)
     except HTTPException:
         raise
-    except Exception as exc:  # pragma: no cover
-        raise HTTPException(status_code=500, detail=f"Voice ask failed: {exc}")
+    except Exception as exc: 
+        logger.exception("Voice ask failed")
+        raise HTTPException(
+            status_code=500,
+            detail="AI provider request failed. See server logs.",
+        )

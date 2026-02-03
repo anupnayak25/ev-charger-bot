@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.core.config import get_settings
@@ -7,6 +9,8 @@ from app.core import openai_client
 from app.schemas import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/api", tags=["chat"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -37,5 +41,9 @@ def chat(req: ChatRequest) -> ChatResponse:
         )
         reply = response.choices[0].message.content or ""
         return ChatResponse(reply=reply)
-    except Exception as exc:  # pragma: no cover
-        raise HTTPException(status_code=500, detail=f"OpenAI request failed: {exc}")
+    except Exception as exc:  
+        logger.exception("OpenAI request failed")
+        raise HTTPException(
+            status_code=500,
+            detail="AI provider request failed. See server logs.",
+        )
